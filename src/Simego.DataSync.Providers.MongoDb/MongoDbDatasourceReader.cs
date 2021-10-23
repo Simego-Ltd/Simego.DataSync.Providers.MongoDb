@@ -18,7 +18,7 @@ namespace Simego.DataSync.Providers.MongoDb
         private ConnectionInterface _connectionIf;
 
         [Category("Settings")]
-        public string ConnectionString { get; set; };
+        public string ConnectionString { get; set; }
 
         [Category("Settings")]
         [Description("MongoDb Database")]
