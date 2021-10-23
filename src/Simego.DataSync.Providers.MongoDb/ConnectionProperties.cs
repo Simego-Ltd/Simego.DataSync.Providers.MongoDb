@@ -1,3 +1,4 @@
+using System;
 using Simego.DataSync.Providers.MongoDb.TypeConverters;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -10,25 +11,41 @@ namespace Simego.DataSync.Providers.MongoDb
         
         [Category("Settings")]
         [Description("MongoDb Server Connection String")]
-        public string ConnectionString { get { return _reader.ConnectionString; } set { _reader.ConnectionString = value; } }
+        public string ConnectionString 
+        { 
+            get => _reader.ConnectionString;
+            set => _reader.ConnectionString = value;
+        }
         
         [Category("Settings")]
         [Description("MongoDb Database")]
         [TypeConverter(typeof(DatabaseTypeConverter))]
-        public string Database { get { return _reader.Database; } set { _reader.Database = value; } }
+        public string Database 
+        { 
+            get => _reader.Database;
+            set => _reader.Database = value;
+        }
         
         [Category("Settings")]
         [Description("MongoDb Collection")]
         [TypeConverter(typeof(CollectionTypeConverter))]
-        public string Collection { get { return _reader.Collection; } set { _reader.Collection = value; } }
+        public string Collection 
+        { 
+            get => _reader.Collection;
+            set => _reader.Collection = value;
+        }
 
         [Category("Filter")]
         [Description("MongoDb Document Filter Expression")]
-        public string DocumentFilter { get { return _reader.DocumentFilter; } set { _reader.DocumentFilter = value; } }
+        public string DocumentFilter 
+        { 
+            get => _reader.DocumentFilter;
+            set => _reader.DocumentFilter = value;
+        }
 
         public ConnectionProperties(MongoDbDatasourceReader reader)
         {
-            _reader = reader;
+            _reader = reader ?? throw new ArgumentNullException((nameof(reader)));
         }
 
         public List<string> GetDatabases() => _reader.GetDatabases();

@@ -47,8 +47,8 @@ namespace Simego.DataSync.Providers.MongoDb
             // Store the MongoDb _id against rows
             dt.AddIdentifierColumn(typeof(string));
             
-            DataSchemaMapping mapping = new DataSchemaMapping(SchemaMap, Side);
-            IList<DataSchemaItem> columns = SchemaMap.GetIncludedColumns();
+            var mapping = new DataSchemaMapping(SchemaMap, Side);
+            var columns = SchemaMap.GetIncludedColumns();
 
             var filter = string.IsNullOrEmpty(DocumentFilter) ? FilterDefinition<BsonDocument>.Empty : DocumentFilter;
            
@@ -58,9 +58,9 @@ namespace Simego.DataSync.Providers.MongoDb
             var collection = database.GetCollection<BsonDocument>(Collection);            
             var cursor = collection.Find(filter).ToCursor();
                        
-            foreach (var item_row in cursor.ToEnumerable())
+            foreach (var itemRow in cursor.ToEnumerable())
             {
-                var d = item_row.ToDictionary();
+                var d = itemRow.ToDictionary();
                 try
                 {
                     if (dt.Rows.AddWithIdentifier(mapping, columns,
@@ -139,9 +139,9 @@ namespace Simego.DataSync.Providers.MongoDb
             // Query Last 10 rows to build the schema ....
             var cursor = collection.Find(new BsonDocument()).Sort("{ _id: -1 }").Limit(SchemaDiscoveryMaxRows).ToCursor();
 
-            foreach (var item_row in cursor.ToEnumerable())
+            foreach (var itemRow in cursor.ToEnumerable())
             {                
-                foreach(var column in item_row)
+                foreach(var column in itemRow)
                 {
                     // Ignore null values
                     if (column.Value.IsBsonNull) continue;
@@ -272,10 +272,6 @@ namespace Simego.DataSync.Providers.MongoDb
                             }
                             break;
                         }
-                    default:
-                        {
-                            break;
-                        }
                 }
             }
         }
@@ -299,7 +295,7 @@ namespace Simego.DataSync.Providers.MongoDb
             _connectionIf.Font = parent.Font;
             _connectionIf.Size = new Size(parent.Width, parent.Height);
             _connectionIf.Location = new Point(0, 0);
-            _connectionIf.Dock = System.Windows.Forms.DockStyle.Fill;
+            _connectionIf.Dock = DockStyle.Fill;
 
             parent.Controls.Add(_connectionIf);
         }
@@ -318,7 +314,7 @@ namespace Simego.DataSync.Providers.MongoDb
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message, "MongoDbDatasourceReader", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(e.Message, nameof(MongoDbDatasourceReader), MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
 
             return false;
