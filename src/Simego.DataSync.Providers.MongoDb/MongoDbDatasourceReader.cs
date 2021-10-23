@@ -16,9 +16,9 @@ namespace Simego.DataSync.Providers.MongoDb
     public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup
     {
         private ConnectionInterface _connectionIf;
-        
+
         [Category("Settings")]
-        public string ConnectionString { get; set; } = "mongodb+srv://dbUser:npWzpUeexQRfJHDa@datasyncdev.wa9jb.mongodb.net/DataSyncDev?retryWrites=true&w=majority";
+        public string ConnectionString { get; set; };
 
         [Category("Settings")]
         [Description("MongoDb Database")]
