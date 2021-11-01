@@ -10,53 +10,85 @@ namespace Simego.DataSync.Providers.MongoDb
     {
         protected override object GetRowValue(string columnName, string[] columnParts, Dictionary<string, object> item)
         {
-            if (columnParts[0] == "fields")
+            if (columnParts.Length < 2) return null; // Podio columns have at least 2 parts fields|name|subname
+            if (columnParts[0] != "fields") return null;
+
+            if (item[columnParts[0]] is object [] arr)
             {
-                if (item[columnParts[0]] is object [] arr)
+                foreach (var field in arr)
                 {
-                    foreach (var field in arr)
+                    if (field is Dictionary<string, object> values)
                     {
-                        if (field is Dictionary<string, object> f)
+                        var label = (string)values["label"]; // podio column name
+                        var type = (string)values["type"]; // type of podio column
+                        var name = columnParts[columnParts.Length - 1]; // podio subname of field to return
+
+                        if (label == columnParts[1])
                         {
-                            var label = (string)f["label"];
-                            var type = (string)f["type"];
-                            
-                            if (label == columnParts[1])
+                            var value = GetFirstValuesDictionary(values);
+                            if (value != null)
                             {
-                                var value = (Dictionary<string, object>)((object[])f["values"])[0];
-                                
+                                // Return value based on Podio DataType
                                 switch (type)
                                 {
                                     case "app":
                                     {
-                                        if (columnParts[columnParts.Length - 1] == "id")
-                                        {
-                                            return ((Dictionary<string, object>)value["value"])["item_id"];    
-                                        }
-                                        return ((Dictionary<string, object>)value["value"])["title"];
+                                        return GetDictionaryValue(GetDictionary(value, "value"),
+                                            name == "id" ? "item_id" : "title");
                                     }
                                     case "money":
                                     {
-                                        if (columnParts[columnParts.Length - 1] == "currency")
-                                        {
-                                            return value["currency"];    
-                                        }
-                                        return value["value"];
+                                        return GetDictionaryValue(value, name == "currency" ? name : "value");
+                                    }
+                                    case "category":
+                                    {
+                                        return GetDictionaryValue(GetDictionary(value, "value"), name == "id" ? name : "text");
                                     }
                                     default:
                                     {
-                                        return value["value"];
+                                        return GetDictionaryValue(value, "value");
                                     }
                                 }
-
-                                break;
                             }
-
                         }
                     }
                 }
             }
-            
+
+            return null;
+        }
+
+        private object GetDictionaryValue(Dictionary<string, object> dictionary, string name)
+        {
+            if (dictionary != null && dictionary.TryGetValue(name, out var val))
+            {
+                return val;
+            }
+            return null;
+        }
+        private Dictionary<string, object> GetDictionary(Dictionary<string, object> dictionary, string name)
+        {
+            if (dictionary != null && dictionary.TryGetValue(name, out var val))
+            {
+                return val as Dictionary<string, object>;
+            }
+            return null;
+        }
+        private Dictionary<string, object> [] GetArray(Dictionary<string, object> dictionary, string name)
+        {
+            if (dictionary != null && dictionary.TryGetValue(name, out var val))
+            {
+                return val as Dictionary<string, object> [];
+            }
+            return null;
+        }
+
+        private Dictionary<string, object> GetFirstValuesDictionary(Dictionary<string, object> f)
+        {
+            if (f["values"] is object[] values && values.Length > 0)
+            {
+                return values[0] as Dictionary<string, object>;
+            }
             return null;
         }
 
@@ -71,6 +103,7 @@ namespace Simego.DataSync.Providers.MongoDb
                 
                     switch (type)
                     {
+                        case "category":
                         case "app":
                         {
                             schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|id", typeof(int), false, false,true, -1));

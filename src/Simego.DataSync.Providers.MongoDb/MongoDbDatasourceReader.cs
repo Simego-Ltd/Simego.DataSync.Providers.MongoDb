@@ -19,6 +19,7 @@ namespace Simego.DataSync.Providers.MongoDb
         private ConnectionInterface _connectionIf;
 
         [Category("Settings")]
+        [PasswordPropertyText(true)]
         public string ConnectionString { get; set; }
 
         [Category("Settings")]
@@ -144,7 +145,8 @@ namespace Simego.DataSync.Providers.MongoDb
             var collection = database.GetCollection<BsonDocument>(Collection);
             
             // Query Last 10 rows to build the schema ....
-            var cursor = collection.Find(new BsonDocument()).Sort("{ _id: -1 }").Limit(SchemaDiscoveryMaxRows).ToCursor();
+            var filter = string.IsNullOrEmpty(DocumentFilter) ? FilterDefinition<BsonDocument>.Empty : DocumentFilter;
+            var cursor = collection.Find(filter).Sort("{ _id: -1 }").Limit(SchemaDiscoveryMaxRows).ToCursor();
 
             foreach (var itemRow in cursor.ToEnumerable())
             {
