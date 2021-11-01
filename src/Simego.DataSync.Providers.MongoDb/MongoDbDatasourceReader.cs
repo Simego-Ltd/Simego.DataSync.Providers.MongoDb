@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
+using Simego.DataSync.Helpers.Massive;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
@@ -96,7 +97,7 @@ namespace Simego.DataSync.Providers.MongoDb
                                 }
                                 return value;
                             }
-                            return null;
+                            return GetRowValue(columnName, parts, d);
                         }
                         , DataSchemaTypeConverter.ConvertTo<string>(d["_id"])) == DataTableStore.ABORT)
                     {
@@ -112,6 +113,10 @@ namespace Simego.DataSync.Providers.MongoDb
             return dt;
         }
 
+        protected virtual object GetRowValue(string columnName, string[] columnParts, Dictionary<string, object> item)
+        {
+            return null;
+        }
         private Dictionary<string, object> GetDocumentElement(Dictionary<string, object> source, string columnName)
         {
             var parts = columnName.Split('|');
@@ -119,14 +124,16 @@ namespace Simego.DataSync.Providers.MongoDb
             {
                 if(source.TryGetValue(parts[0], out var value))
                 {
-                    return GetDocumentElement((Dictionary<string, object>)value, string.Join("|", parts, 1, parts.Length - 1));
+                    if (value is Dictionary<string, object> dictionaryValue)
+                    {
+                        return GetDocumentElement(dictionaryValue,string.Join("|", parts, 1, parts.Length - 1));
+                    }
                 }
                 return null;
-                
             }
             return source;
         }
-
+        
         public override DataSchema GetDefaultDataSchema()
         {
             //Return the Data source default Schema.
@@ -140,12 +147,12 @@ namespace Simego.DataSync.Providers.MongoDb
             var cursor = collection.Find(new BsonDocument()).Sort("{ _id: -1 }").Limit(SchemaDiscoveryMaxRows).ToCursor();
 
             foreach (var itemRow in cursor.ToEnumerable())
-            {                
-                foreach(var column in itemRow)
+            {
+                foreach (var column in itemRow)
                 {
                     // Ignore null values
                     if (column.Value.IsBsonNull) continue;
-                    
+
                     if (column.Value.IsBsonDocument)
                     {
                         GetDefaultDataSchema(schema, column.Name, column.Value.AsBsonDocument);
@@ -156,30 +163,40 @@ namespace Simego.DataSync.Providers.MongoDb
                         {
                             if (item.IsBsonDocument)
                             {
-                               schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(JToken), false, false, true, -1));
+                                schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(JToken), false, false,
+                                    true, -1));
                             }
                             else
                             {
-                                schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(string[]), false, false, true, -1));
+                                schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(string[]), false,
+                                    false, true, -1));
                             }
+
                             break;
                         }
                     }
                     else if (column.Value.IsObjectId)
                     {
-                        schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(string), true, false, false, -1));
+                        schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, typeof(string), true, false, false,
+                            -1));
                     }
                     else
                     {
-                        schema.Map.AddIfNotExists(new DataSchemaItem(column.Name, UseSchemaDataTypes ? column.GetDataSyncType() : typeof(string), false, false, true, -1));
+                        schema.Map.AddIfNotExists(new DataSchemaItem(column.Name,
+                            UseSchemaDataTypes ? column.GetDataSyncType() : typeof(string), false, false, true, -1));
                     }
+
+                    ProcessSchemaItem(schema, column.Name, column.Value);
                 }
             }
                        
             return schema;
-
         }
 
+        protected virtual void ProcessSchemaItem(DataSchema schema, string name, BsonValue value)
+        {
+            
+        } 
         private void GetDefaultDataSchema(DataSchema schema, string name, BsonDocument document)
         {
             // Add a Top Level node to store the Json for this document.
@@ -212,7 +229,7 @@ namespace Simego.DataSync.Providers.MongoDb
                 }
             }                       
         }
-
+        
         public override List<ProviderParameter> GetInitializationParameters()
         {
             //Return the Provider Settings so we can save the Project File.
