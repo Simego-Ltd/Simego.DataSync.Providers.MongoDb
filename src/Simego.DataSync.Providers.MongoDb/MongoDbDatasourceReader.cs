@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 using Simego.DataSync.Helpers.Massive;
+using System.Linq;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
@@ -19,7 +20,7 @@ namespace Simego.DataSync.Providers.MongoDb
         private ConnectionInterface _connectionIf;
 
         [Category("Settings")]
-        [PasswordPropertyText(true)]
+        //[PasswordPropertyText(true)]
         public string ConnectionString { get; set; }
 
         [Category("Settings")]
@@ -191,7 +192,8 @@ namespace Simego.DataSync.Providers.MongoDb
                     ProcessSchemaItem(schema, column.Name, column.Value);
                 }
             }
-                       
+
+            schema.Map = schema.Map.OrderBy(p => p.ColumnName).ToList();
             return schema;
         }
 
