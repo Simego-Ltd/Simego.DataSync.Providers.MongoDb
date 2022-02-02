@@ -8,13 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
-using System.Windows.Forms;
-using Simego.DataSync.Helpers.Massive;
 using System.Linq;
+using System.Windows.Forms;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
-    [ProviderInfo(Name = "MongoDb", Description = "MongoDb Description")]
+    [ProviderInfo(Name = "MongoDb", Description = "Read and Write data stored in a MongoDb Database")]
     public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup
     {
         private ConnectionInterface _connectionIf;
@@ -243,13 +242,13 @@ namespace Simego.DataSync.Providers.MongoDb
             //Return the Provider Settings so we can save the Project File.
             return new List<ProviderParameter>
                        {
-                            new ProviderParameter("ConnectionString", ConnectionString),
-                            new ProviderParameter("Database", Database),
-                            new ProviderParameter("Collection", Collection),
-                            new ProviderParameter("DocumentFilter", DocumentFilter),
-                            new ProviderParameter("UseSchemaDataTypes", UseSchemaDataTypes.ToString()),
-                            new ProviderParameter("SchemaDiscoveryMaxRows", SchemaDiscoveryMaxRows.ToString()),
-                            new ProviderParameter("UpdateBatchSize", UpdateBatchSize.ToString()),
+                            new ProviderParameter(nameof(ConnectionString), ConnectionString),
+                            new ProviderParameter(nameof(Database), Database),
+                            new ProviderParameter(nameof(Collection), Collection),
+                            new ProviderParameter(nameof(DocumentFilter), DocumentFilter),
+                            new ProviderParameter(nameof(UseSchemaDataTypes), UseSchemaDataTypes.ToString()),
+                            new ProviderParameter(nameof(SchemaDiscoveryMaxRows), SchemaDiscoveryMaxRows.ToString()),
+                            new ProviderParameter(nameof(UpdateBatchSize), UpdateBatchSize.ToString()),
                        };
         }
 
@@ -262,27 +261,27 @@ namespace Simego.DataSync.Providers.MongoDb
 
                 switch (p.Name)
                 {
-                    case "ConnectionString":
+                    case nameof(ConnectionString):
                         {
                             ConnectionString = p.Value;
                             break;
                         }
-                    case "Database":
+                    case nameof(Database):
                         {
                             Database = p.Value;
                             break;
                         }
-                    case "Collection":
+                    case nameof(Collection):
                         {
                             Collection = p.Value;
                             break;
                         }
-                    case "DocumentFilter":
+                    case nameof(DocumentFilter):
                         {
                             DocumentFilter = p.Value;
                             break;
                         }
-                    case "UseSchemaDataTypes":
+                    case nameof(UseSchemaDataTypes):
                         {
                             if(bool.TryParse(p.Value, out var val))
                             {
@@ -290,7 +289,7 @@ namespace Simego.DataSync.Providers.MongoDb
                             }                            
                             break;
                         }
-                    case "SchemaDiscoveryMaxRows":
+                    case nameof(SchemaDiscoveryMaxRows):
                         {
                             if (int.TryParse(p.Value, out var val))
                             {
@@ -298,7 +297,7 @@ namespace Simego.DataSync.Providers.MongoDb
                             }
                             break;
                         }
-                    case "UpdateBatchSize":
+                    case nameof(UpdateBatchSize):
                         {
                             if (int.TryParse(p.Value, out var val))
                             {
@@ -309,15 +308,9 @@ namespace Simego.DataSync.Providers.MongoDb
                 }
             }
         }
-
-        public override IDataSourceWriter GetWriter()
-        {
-            //if your provider is read-only return null here.
-            return new MongoDbDataSourceWriter { SchemaMap = SchemaMap };
-        }
-
-        #region IDataSourceSetup - Render Custom Configuration UI
         
+        #region IDataSourceSetup - Render Custom Configuration UI
+
         public void DisplayConfigurationUI(Control parent)
         {
             if (_connectionIf == null)
@@ -340,10 +333,9 @@ namespace Simego.DataSync.Providers.MongoDb
             {
                 if (string.IsNullOrEmpty(ConnectionString))
                 {
-                    throw new ArgumentException("You must specify a valid ExampleSetting.");
+                    throw new ArgumentException($"You must specify a valid {nameof(ConnectionString)}.");
                 }
 
-                //GetDefaultDataSchema(); // Option - Verify the Schema Loads.
                 return true;
             }
             catch (Exception e)
@@ -352,7 +344,6 @@ namespace Simego.DataSync.Providers.MongoDb
             }
 
             return false;
-
         }
 
         public IDataSourceReader GetReader()
@@ -361,22 +352,11 @@ namespace Simego.DataSync.Providers.MongoDb
         }
 
         #endregion
+        public override IDataSourceWriter GetWriter() => new MongoDbDataSourceWriter { SchemaMap = SchemaMap };
 
-        public MongoClient GetClient()
-        {
-            var settings = MongoClientSettings.FromConnectionString(ConnectionString);
-            return new MongoClient(settings);            
-        }
-        public List<string> GetDatabases()
-        {
-            return GetClient().ListDatabaseNames().ToList();
-        }
-
-        public List<string> GetCollections()
-        {
-            var database = GetClient().GetDatabase(Database);
-            return database.ListCollectionNames().ToList();
-        }
+        public MongoClient GetClient() => new MongoClient(MongoClientSettings.FromConnectionString(ConnectionString));
+        public List<string> GetDatabases() => GetClient().ListDatabaseNames().ToList();
+        public List<string> GetCollections() => GetClient().GetDatabase(Database).ListCollectionNames().ToList();
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
@@ -7,13 +8,20 @@ using Simego.DataSync.Providers.MongoDb.Extensions;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
-    [ProviderInfo(Name = "MongoDb - Podio Data", Description = "Reads Podio App data stored in MongoDb")]
+    [ProviderInfo(Name = "MongoDb - Podio Data", Description = "Reads Podio App Items data stored in MongoDb")]
     public class MongoDbPodioDatasourceReader : MongoDbDatasourceReader
     {
+        [Category("Settings.Podio")]
+        [Description("Json Element containing Podio Json Data")]
+        public string PodioDataElement { get; set; } = "json";
+
         protected override object GetRowValue(string columnName, string[] columnParts, Dictionary<string, object> item)
         {
             if (columnParts.Length < 2) return null; // Podio columns have at least 2 parts fields|name|subname
             if (columnParts[0] != "fields") return null;
+
+            // Reference the Podio Data Element in the Document.
+            item = string.IsNullOrEmpty(PodioDataElement) ? item : item[PodioDataElement] as Dictionary<string, object>;
 
             if (item[columnParts[0]] is object [] arr)
             {
@@ -221,6 +229,16 @@ namespace Simego.DataSync.Providers.MongoDb
 
         protected override void ProcessSchemaItem(DataSchema schema, string name, BsonValue value)
         {
+            if(name == PodioDataElement)
+            {
+                var fieldsElement = value["fields"] as BsonValue;
+                if(fieldsElement != null)
+                {
+                    ProcessSchemaItem(schema, "fields", fieldsElement);
+                    return;
+                }                
+            }
+
             if (name == "fields" && value is BsonArray fields)
             {
                 foreach (var field in fields)
@@ -288,6 +306,29 @@ namespace Simego.DataSync.Providers.MongoDb
                     }
                 }  
             }
+        }
+
+        public override void Initialize(List<ProviderParameter> parameters)
+        {
+            base.Initialize(parameters);
+            foreach(var p in parameters)
+            {
+                switch (p.Name)
+                {
+                    case nameof(PodioDataElement):
+                        {
+                            PodioDataElement = p.Value;
+                            break;
+                        }
+                }
+            }
+        }
+
+        public override List<ProviderParameter> GetInitializationParameters()
+        {
+            var parameters = base.GetInitializationParameters();
+            parameters.Add(new ProviderParameter(nameof(PodioDataElement), PodioDataElement));
+            return parameters;
         }
     }
 }
