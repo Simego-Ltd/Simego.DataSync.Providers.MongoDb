@@ -6,6 +6,7 @@ using Simego.DataSync.Engine;
 using Simego.DataSync.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
@@ -20,6 +21,12 @@ namespace Simego.DataSync.Providers.MongoDb
 
         public override void AddItems(List<DataCompareItem> items, IDataSynchronizationStatus status)
         {
+            if(DataSourceReader.UpdateBatchSize > 1)
+            {
+                AddItemsBatch(items, status);
+                return;
+            }
+
             if (items != null && items.Count > 0)
             {
                 int currentItem = 0;
@@ -42,7 +49,7 @@ namespace Simego.DataSync.Providers.MongoDb
                             // Get the Target Item Data
                             Dictionary<string, object> targetItem = AddItemToDictionary(Mapping, itemInvariant);
 
-                            // Create a BsoDocument from the Json
+                            // Create a BsonDocument from the Json
                             var document = BsonDocument.Parse(JsonConvert.SerializeObject(targetItem, Formatting.None));
                             
                             Collection.InsertOne(document);
@@ -66,13 +73,53 @@ namespace Simego.DataSync.Providers.MongoDb
             }
         }
 
-        public override void UpdateItems(List<DataCompareItem> items, IDataSynchronizationStatus status)
+        private void AddItemsBatch(List<DataCompareItem> items, IDataSynchronizationStatus status)
         {
             if (items != null && items.Count > 0)
             {
                 int currentItem = 0;
 
+                foreach (var batch in items.Chunk(DataSourceReader.UpdateBatchSize))
+                {
+                    if (!status.ContinueProcessing)
+                        break;
 
+                    try
+                    {
+                        var documents = new List<BsonDocument>();
+                        foreach (var item in batch)
+                        {
+                            // Get the Target Item Data
+                            Dictionary<string, object> targetItem = AddItemToDictionary(Mapping, item);
+
+                            // Create a BsonDocument from the Json
+                            documents.Add(BsonDocument.Parse(JsonConvert.SerializeObject(targetItem, Formatting.None)));
+                        }
+
+                        Collection.InsertMany(documents);
+
+                        currentItem += documents.Count;
+
+                        ClearSyncStatus(batch); //Clear the Sync Flag on Processed Rows
+
+                    }
+                    catch (SystemException e)
+                    {
+                        HandleError(status, e);
+                    }
+                    finally
+                    {
+                        status.Progress(items.Count, currentItem); //Update the Sync Progress
+                    }
+                }
+            }
+        }
+
+        public override void UpdateItems(List<DataCompareItem> items, IDataSynchronizationStatus status)
+        {
+            if (items != null && items.Count > 0)
+            {
+                int currentItem = 0;
 
                 foreach (var item in items)
                 {
@@ -135,6 +182,12 @@ namespace Simego.DataSync.Providers.MongoDb
 
         public override void DeleteItems(List<DataCompareItem> items, IDataSynchronizationStatus status)
         {
+            if(DataSourceReader.UpdateBatchSize > 1)
+            {
+                DeleteItemsBatch(items, status);
+                return;
+            }
+
             if (items != null && items.Count > 0)
             {
                 int currentItem = 0;
@@ -170,6 +223,39 @@ namespace Simego.DataSync.Providers.MongoDb
                         status.Progress(items.Count, ++currentItem); //Update the Sync Progress
                     }
 
+                }
+            }
+        }
+
+        private void DeleteItemsBatch(List<DataCompareItem> items, IDataSynchronizationStatus status)
+        {
+            if (items != null && items.Count > 0)
+            {
+                int currentItem = 0;
+
+                foreach (var batch in items.Chunk(DataSourceReader.UpdateBatchSize))
+                {
+                    if (!status.ContinueProcessing)
+                        break;
+
+                    try
+                    {
+                        var ids = batch.Select(p => ObjectId.Parse(p.GetTargetIdentifier<string>())).ToList();
+                        
+                        Collection.DeleteMany(Builders<BsonDocument>.Filter.In("_id", ids));
+
+                        currentItem += ids.Count;
+
+                        ClearSyncStatus(batch); //Clear the Sync Flag on Processed Rows
+                    }
+                    catch (SystemException e)
+                    {
+                        HandleError(status, e);
+                    }
+                    finally
+                    {
+                        status.Progress(items.Count, currentItem); //Update the Sync Progress
+                    }
                 }
             }
         }

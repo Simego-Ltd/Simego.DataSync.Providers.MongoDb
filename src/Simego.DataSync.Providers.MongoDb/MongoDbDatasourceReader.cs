@@ -45,6 +45,10 @@ namespace Simego.DataSync.Providers.MongoDb
         [Description("MongoDb Document Filter Expression")]
         public string DocumentFilter { get; set; }
 
+        [Category("Settings")]
+        [Description("MongoDb Database")]
+        public int UpdateBatchSize { get; set; } = 1;
+
         public override DataTableStore GetDataTable(DataTableStore dt)
         {
             // Store the MongoDb _id against rows
@@ -245,6 +249,7 @@ namespace Simego.DataSync.Providers.MongoDb
                             new ProviderParameter("DocumentFilter", DocumentFilter),
                             new ProviderParameter("UseSchemaDataTypes", UseSchemaDataTypes.ToString()),
                             new ProviderParameter("SchemaDiscoveryMaxRows", SchemaDiscoveryMaxRows.ToString()),
+                            new ProviderParameter("UpdateBatchSize", UpdateBatchSize.ToString()),
                        };
         }
 
@@ -290,6 +295,14 @@ namespace Simego.DataSync.Providers.MongoDb
                             if (int.TryParse(p.Value, out var val))
                             {
                                 SchemaDiscoveryMaxRows = val;
+                            }
+                            break;
+                        }
+                    case "UpdateBatchSize":
+                        {
+                            if (int.TryParse(p.Value, out var val))
+                            {
+                                UpdateBatchSize = val;
                             }
                             break;
                         }
