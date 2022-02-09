@@ -89,15 +89,15 @@ namespace Simego.DataSync.Providers.MongoDb
                                         return f.ToNullableUniversalTime();
                                     }
                                     if (f.IsString)
-                                    {
+                                    {                                        
                                         //"Fri May 25 21:22:15 UTC 2007"
                                         if (DateTime.TryParseExact(f.AsString, "ddd MMM dd HH:mm:ss UTC yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var dateTimeValue))
                                         {
                                             return dateTimeValue;
                                         }
 
-                                        // Error cannot be converted to a valid DateTime ....
-                                        return null;
+                                        // return default DateTime conversion from string value ....
+                                        return f.AsString;
                                     }
                                 }
                                 return value;
