@@ -51,7 +51,13 @@ namespace Simego.DataSync.Providers.MongoDb
 
                             // Create a BsonDocument from the Json
                             var document = BsonDocument.Parse(JsonConvert.SerializeObject(targetItem, Formatting.None));
-                            
+
+                            // Assign the _id as an ObjectId
+                            if (targetItem.TryGetValue("_id", out var id))
+                            {
+                                document["_id"] = ObjectId.Parse(DataSchemaTypeConverter.ConvertTo<string>(id));
+                            }
+
                             Collection.InsertOne(document);
 
                             //Call the Automation AfterAddItem
@@ -93,7 +99,15 @@ namespace Simego.DataSync.Providers.MongoDb
                             Dictionary<string, object> targetItem = AddItemToDictionary(Mapping, item);
 
                             // Create a BsonDocument from the Json
-                            documents.Add(BsonDocument.Parse(JsonConvert.SerializeObject(targetItem, Formatting.None)));
+                            var document = BsonDocument.Parse(JsonConvert.SerializeObject(targetItem, Formatting.None));
+
+                            // Assign the _id as an ObjectId
+                            if (targetItem.TryGetValue("_id", out var id))
+                            {
+                                document["_id"] = ObjectId.Parse(DataSchemaTypeConverter.ConvertTo<string>(id));
+                            }
+
+                            documents.Add(document);
                         }
 
                         Collection.InsertMany(documents);
