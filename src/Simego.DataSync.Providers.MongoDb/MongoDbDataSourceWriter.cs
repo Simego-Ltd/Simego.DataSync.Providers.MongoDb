@@ -6,6 +6,7 @@ using Simego.DataSync.Engine;
 using Simego.DataSync.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 
 namespace Simego.DataSync.Providers.MongoDb
@@ -166,6 +167,13 @@ namespace Simego.DataSync.Providers.MongoDb
                                 else if (value is JArray jarr)
                                 {
                                     updates.Add(update.Set(key, BsonDocument.Parse(JsonConvert.SerializeObject(jarr, Formatting.None))));
+                                }
+                                else if(value is decimal d)
+                                {
+                                    // MongoDb has limited/weird support for Decimals so lets store this as a Double instead.
+                                    // When you serialize from Json its a Double anyway to this is probably the best workaround here.
+                                    // If you want to store a decimal maybe use a String Type instead?                                    
+                                    updates.Add(update.Set(key, DataSchemaTypeConverter.ConvertTo<double>(d)));
                                 }
                                 else
                                 {
