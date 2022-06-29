@@ -4,12 +4,14 @@ using System.ComponentModel;
 using System.Globalization;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
+using Simego.DataSync.Interfaces;
 using Simego.DataSync.Providers.MongoDb.Extensions;
+using Simego.DataSync.Providers.MongoDb.TypeConverters;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
-    [ProviderInfo(Name = "MongoDb - Podio Data", Description = "Reads Podio App Items data stored in MongoDb")]
-    public class MongoDbPodioDatasourceReader : MongoDbDatasourceReader
+    [ProviderInfo(Name = "MongoDb - Podio Data", Description = "Reads Podio App Items data stored in MongoDb", Group = "MongoDb")]
+    public class MongoDbPodioDatasourceReader : MongoDbDatasourceReader, IDataSourceRegistry
     {
         [Category("Settings.Podio")]
         [Description("Json Element containing Podio Json Data")]
@@ -329,6 +331,89 @@ namespace Simego.DataSync.Providers.MongoDb
             var parameters = base.GetInitializationParameters();
             parameters.Add(new ProviderParameter(nameof(PodioDataElement), PodioDataElement));
             return parameters;
+        }
+
+        [Category("Connection.Library")]
+        [Description("Key Name of the Item in the Connection Library")]
+        [DisplayName("Key")]
+        public string RegistryKey { get; set; }
+
+        public void InitializeFromRegistry(IDataSourceRegistryProvider provider)
+        {
+            var registry = provider.Get(RegistryKey);
+
+            if (registry != null)
+            {
+                foreach (ProviderParameter p in registry.Parameters)
+                {
+                    switch (p.Name)
+                    {
+                        case nameof(ConnectionString):
+                            {
+                                ConnectionString = p.Value;
+                                break;
+                            }
+                        default:
+                            {
+                                break;
+                            }
+                    }
+                }
+            }
+        }
+
+        public List<ProviderParameter> GetRegistryInitializationParameters()
+        {
+            return new List<ProviderParameter> { new ProviderParameter(nameof(ConnectionString), ConnectionString) };
+        }
+
+        public IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
+        {
+            InitializeFromRegistry(provider);
+            return this;
+        }
+
+        public object GetRegistryInterface() => new MongoDbPodioDatasourceReaderWithRegistry(this);
+    }
+
+    public class MongoDbPodioDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbPodioDatasourceReader>
+    {
+        [Category("Settings")]
+        [ReadOnly(true)]
+        public string ConnectionString { get { return _reader.ConnectionString; } set { _reader.ConnectionString = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Database")]
+        [TypeConverter(typeof(DatabaseTypeConverter))]
+        public string Database { get { return _reader.Database; } set { _reader.Database = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Collection")]
+        [TypeConverter(typeof(CollectionTypeConverter))]
+        public string Collection { get { return _reader.Collection; } set { _reader.Collection = value; } }
+
+        [Category("Schema.Settings")]
+        [Description("The number of Documents to look at to discover the Schema.")]
+        public int SchemaDiscoveryMaxRows { get { return _reader.SchemaDiscoveryMaxRows; } set { _reader.SchemaDiscoveryMaxRows = value; } }
+
+        [Category("Schema.Settings")]
+        [Description("Use a Data Type discovered from the Schema.")]
+        public bool UseSchemaDataTypes { get { return _reader.UseSchemaDataTypes; } set { _reader.UseSchemaDataTypes = value; } }
+
+        [Category("Filter")]
+        [Description("MongoDb Document Filter Expression")]
+        public string DocumentFilter { get { return _reader.DocumentFilter; } set { _reader.DocumentFilter = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Database")]
+        public int UpdateBatchSize { get { return _reader.UpdateBatchSize; } set { _reader.UpdateBatchSize = value; } }
+
+        [Category("Settings.Podio")]
+        [Description("Json Element containing Podio Json Data")]
+        public string PodioDataElement { get { return _reader.PodioDataElement; } set { _reader.PodioDataElement = value; } }
+
+        public MongoDbPodioDatasourceReaderWithRegistry(MongoDbPodioDatasourceReader reader) : base(reader)
+        {
         }
     }
 }

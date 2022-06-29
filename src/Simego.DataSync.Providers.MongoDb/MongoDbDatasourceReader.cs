@@ -13,8 +13,8 @@ using System.Windows.Forms;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
-    [ProviderInfo(Name = "MongoDb", Description = "Read and Write data stored in a MongoDb Database")]
-    public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup
+    [ProviderInfo(Name = "MongoDb", Description = "Read and Write data stored in a MongoDb Database", Group = "MongoDb")]
+    public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup, IDataSourceRegistry
     {
         private ConnectionInterface _connectionIf;
 
@@ -47,7 +47,7 @@ namespace Simego.DataSync.Providers.MongoDb
         [Category("Settings")]
         [Description("MongoDb Database")]
         public int UpdateBatchSize { get; set; } = 1;
-
+        
         public override DataTableStore GetDataTable(DataTableStore dt)
         {
             // Store the MongoDb _id against rows
@@ -242,6 +242,7 @@ namespace Simego.DataSync.Providers.MongoDb
             //Return the Provider Settings so we can save the Project File.
             return new List<ProviderParameter>
                        {
+                            new ProviderParameter(nameof(RegistryKey), RegistryKey),
                             new ProviderParameter(nameof(ConnectionString), ConnectionString),
                             new ProviderParameter(nameof(Database), Database),
                             new ProviderParameter(nameof(Collection), Collection),
@@ -261,6 +262,11 @@ namespace Simego.DataSync.Providers.MongoDb
 
                 switch (p.Name)
                 {
+                    case nameof(RegistryKey):
+                        {
+                            RegistryKey = p.Value;
+                            break;
+                        }
                     case nameof(ConnectionString):
                         {
                             ConnectionString = p.Value;
@@ -358,5 +364,83 @@ namespace Simego.DataSync.Providers.MongoDb
         public List<string> GetDatabases() => GetClient().ListDatabaseNames().ToList();
         public List<string> GetCollections() => GetClient().GetDatabase(Database).ListCollectionNames().ToList();
 
+        [Category("Connection.Library")]
+        [Description("Key Name of the Item in the Connection Library")]
+        [DisplayName("Key")] 
+        public string RegistryKey { get; set; }
+
+        public void InitializeFromRegistry(IDataSourceRegistryProvider provider)
+        {
+            var registry = provider.Get(RegistryKey);
+
+            if (registry != null)
+            {
+                foreach (ProviderParameter p in registry.Parameters)
+                {
+                    switch (p.Name)
+                    {
+                        case nameof(ConnectionString):
+                            {
+                                ConnectionString = p.Value;
+                                break;
+                            }                        
+                        default:
+                            {
+                                break;
+                            }
+                    }
+                }
+            }
+        }
+
+        public List<ProviderParameter> GetRegistryInitializationParameters()
+        {
+            return new List<ProviderParameter> { new ProviderParameter(nameof(ConnectionString), ConnectionString) };
+        }
+
+        public IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
+        {
+            InitializeFromRegistry(provider);
+            return this;
+        }
+
+        public object GetRegistryInterface() => new MongoDbDatasourceReaderWithRegistry(this);
+    }
+
+    public class MongoDbDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbDatasourceReader>
+    {
+        [Category("Settings")]
+        [ReadOnly(true)]
+        public string ConnectionString { get { return _reader.ConnectionString; } set { _reader.ConnectionString = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Database")]
+        [TypeConverter(typeof(DatabaseTypeConverter))]
+        public string Database { get { return _reader.Database; } set { _reader.Database = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Collection")]
+        [TypeConverter(typeof(CollectionTypeConverter))]
+        public string Collection { get { return _reader.Collection; } set { _reader.Collection = value; } }
+
+        [Category("Schema.Settings")]
+        [Description("The number of Documents to look at to discover the Schema.")]
+        public int SchemaDiscoveryMaxRows { get { return _reader.SchemaDiscoveryMaxRows; } set { _reader.SchemaDiscoveryMaxRows = value; } }
+
+        [Category("Schema.Settings")]
+        [Description("Use a Data Type discovered from the Schema.")]
+        public bool UseSchemaDataTypes { get { return _reader.UseSchemaDataTypes; } set { _reader.UseSchemaDataTypes = value; } }
+
+        [Category("Filter")]
+        [Description("MongoDb Document Filter Expression")]
+        public string DocumentFilter { get { return _reader.DocumentFilter; } set { _reader.DocumentFilter = value; } }
+
+        [Category("Settings")]
+        [Description("MongoDb Database")]
+        public int UpdateBatchSize { get { return _reader.UpdateBatchSize; } set { _reader.UpdateBatchSize = value; } }
+
+        public MongoDbDatasourceReaderWithRegistry(MongoDbDatasourceReader reader) : base(reader)
+        {
+        }
     }
 }
