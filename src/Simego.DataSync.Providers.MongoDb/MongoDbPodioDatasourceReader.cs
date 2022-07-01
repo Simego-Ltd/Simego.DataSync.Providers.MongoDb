@@ -23,9 +23,9 @@ namespace Simego.DataSync.Providers.MongoDb
             if (columnParts[0] != "fields") return null;
 
             // Reference the Podio Data Element in the Document.
-            item = string.IsNullOrEmpty(PodioDataElement) ? item : item[PodioDataElement] as Dictionary<string, object>;
+            item = string.IsNullOrEmpty(PodioDataElement) ? item : GetElement(item, PodioDataElement);
 
-            if (item[columnParts[0]] is object [] arr)
+            if (item[columnParts[0]] is object[] arr)
             {
                 foreach (var field in arr)
                 {
@@ -50,14 +50,14 @@ namespace Simego.DataSync.Providers.MongoDb
                                                 var token = JToken.FromObject(GetValuesDictionaryArray(values, "value"));
                                                 return token.HasValues ? token : null;
                                             }
-                                            
+
                                             var list = new List<object>();
                                             foreach (var v in GetValuesDictionaryArray(values, "value"))
                                             {
                                                 list.Add(v[name == "id" ? "item_id" : "title"]);
                                             }
                                             list.Sort();
-                                            return list.ToArray();                                            
+                                            return list.ToArray();
                                         }
                                     case "embed":
                                         {
@@ -86,7 +86,7 @@ namespace Simego.DataSync.Providers.MongoDb
                                                 var token = JToken.FromObject(GetValuesDictionaryArray(values, "value"));
                                                 return token.HasValues ? token : null;
                                             }
-                                            
+
                                             var list = new List<object>();
                                             foreach (var v in GetValuesDictionaryArray(values, "value"))
                                             {
@@ -131,12 +131,12 @@ namespace Simego.DataSync.Providers.MongoDb
                                                 var token = JToken.FromObject(value);
                                                 return token.HasValues ? token : null;
                                             }
-                                            
+
                                             switch (name)
                                             {
                                                 case "start":
                                                     {
-                                                        if(value.TryGetValue("start_date_utc", out var val) && val is string s && !string.IsNullOrEmpty(s))
+                                                        if (value.TryGetValue("start_date_utc", out var val) && val is string s && !string.IsNullOrEmpty(s))
                                                         {
                                                             return Date.Parse(s);
                                                         }
@@ -148,7 +148,7 @@ namespace Simego.DataSync.Providers.MongoDb
                                                         {
                                                             return DateTime.SpecifyKind(DateTime.Parse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal), DateTimeKind.Utc);
                                                         }
-                                                        return null;                                                        
+                                                        return null;
                                                     }
                                                 case "end":
                                                     {
@@ -156,7 +156,7 @@ namespace Simego.DataSync.Providers.MongoDb
                                                         {
                                                             return Date.Parse(s);
                                                         }
-                                                        return null;                                                         
+                                                        return null;
                                                     }
                                                 case "enddatetimeutc":
                                                     {
@@ -164,10 +164,10 @@ namespace Simego.DataSync.Providers.MongoDb
                                                         {
                                                             return DateTime.SpecifyKind(DateTime.Parse(s, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal), DateTimeKind.Utc);
                                                         }
-                                                        return null;                                                         
+                                                        return null;
                                                     }
                                             }
-                                            
+
                                             return null;
                                         }
                                     default:
@@ -182,6 +182,15 @@ namespace Simego.DataSync.Providers.MongoDb
             }
 
             return null;
+        }
+
+        private Dictionary<string, object> GetElement(Dictionary<string, object> item, string name)
+        {
+            if(item.TryGetValue(name, out var value))
+            {
+                return value as Dictionary<string, object>;
+            }
+            throw new KeyNotFoundException($"Key '{name}' not found in Dictionary");
         }
 
         private object GetDictionaryValue(Dictionary<string, object> dictionary, string name)
@@ -255,7 +264,7 @@ namespace Simego.DataSync.Providers.MongoDb
                         case "app":
                             {
                                 schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}", typeof(JToken), false, false, true, -1));
-                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|id", typeof(int[]), false, false, true, -1));
+                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|id", typeof(long[]), false, false, true, -1));
                                 schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|text", typeof(string[]), false, false, true, -1));
 
                                 break;
@@ -287,8 +296,8 @@ namespace Simego.DataSync.Providers.MongoDb
                         case "contact":
                             {
                                 schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}", typeof(JToken), false, false, true, -1));
-                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|profile_id", typeof(int), false, false, true, -1));
-                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|user_id", typeof(int), false, false, true, -1));
+                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|profile_id", typeof(long), false, false, true, -1));
+                                schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|user_id", typeof(long), false, false, true, -1));
                                 schema.Map.AddIfNotExists(new DataSchemaItem($"fields|{label}|name", typeof(string), false, false, true, -1));
 
                                 break;
@@ -332,13 +341,8 @@ namespace Simego.DataSync.Providers.MongoDb
             parameters.Add(new ProviderParameter(nameof(PodioDataElement), PodioDataElement));
             return parameters;
         }
-
-        [Category("Connection.Library")]
-        [Description("Key Name of the Item in the Connection Library")]
-        [DisplayName("Key")]
-        public string RegistryKey { get; set; }
-
-        public void InitializeFromRegistry(IDataSourceRegistryProvider provider)
+        
+        public override void InitializeFromRegistry(IDataSourceRegistryProvider provider)
         {
             var registry = provider.Get(RegistryKey);
 
@@ -362,18 +366,18 @@ namespace Simego.DataSync.Providers.MongoDb
             }
         }
 
-        public List<ProviderParameter> GetRegistryInitializationParameters()
+        public override List<ProviderParameter> GetRegistryInitializationParameters()
         {
             return new List<ProviderParameter> { new ProviderParameter(nameof(ConnectionString), ConnectionString) };
         }
 
-        public IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
+        public override IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
         {
             InitializeFromRegistry(provider);
             return this;
         }
 
-        public object GetRegistryInterface() => new MongoDbPodioDatasourceReaderWithRegistry(this);
+        public override object GetRegistryInterface() => new MongoDbPodioDatasourceReaderWithRegistry(this);
     }
 
     public class MongoDbPodioDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbPodioDatasourceReader>
@@ -415,5 +419,8 @@ namespace Simego.DataSync.Providers.MongoDb
         public MongoDbPodioDatasourceReaderWithRegistry(MongoDbPodioDatasourceReader reader) : base(reader)
         {
         }
+
+        public List<string> GetDatabases() => _reader.GetDatabases();
+        public List<string> GetCollections() => _reader.GetCollections();        
     }
 }

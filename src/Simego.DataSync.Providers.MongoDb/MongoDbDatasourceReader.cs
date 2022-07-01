@@ -369,7 +369,7 @@ namespace Simego.DataSync.Providers.MongoDb
         [DisplayName("Key")] 
         public string RegistryKey { get; set; }
 
-        public void InitializeFromRegistry(IDataSourceRegistryProvider provider)
+        public virtual void InitializeFromRegistry(IDataSourceRegistryProvider provider)
         {
             var registry = provider.Get(RegistryKey);
 
@@ -393,18 +393,18 @@ namespace Simego.DataSync.Providers.MongoDb
             }
         }
 
-        public List<ProviderParameter> GetRegistryInitializationParameters()
+        public virtual List<ProviderParameter> GetRegistryInitializationParameters()
         {
             return new List<ProviderParameter> { new ProviderParameter(nameof(ConnectionString), ConnectionString) };
         }
 
-        public IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
+        public virtual IDataSourceReader ConnectFromRegistry(IDataSourceRegistryProvider provider)
         {
             InitializeFromRegistry(provider);
             return this;
         }
 
-        public object GetRegistryInterface() => new MongoDbDatasourceReaderWithRegistry(this);
+        public virtual object GetRegistryInterface() => new MongoDbDatasourceReaderWithRegistry(this);
     }
 
     public class MongoDbDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbDatasourceReader>
@@ -442,5 +442,9 @@ namespace Simego.DataSync.Providers.MongoDb
         public MongoDbDatasourceReaderWithRegistry(MongoDbDatasourceReader reader) : base(reader)
         {
         }
+
+        public List<string> GetDatabases() => _reader.GetDatabases();
+        public List<string> GetCollections() => _reader.GetCollections();
+
     }
 }
