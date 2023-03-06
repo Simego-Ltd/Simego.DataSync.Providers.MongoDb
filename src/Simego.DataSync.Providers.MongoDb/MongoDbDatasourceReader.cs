@@ -1,6 +1,7 @@
 using MongoDB.Bson;
 using MongoDB.Driver;
 using Newtonsoft.Json.Linq;
+using Simego.DataSync.Core;
 using Simego.DataSync.Interfaces;
 using Simego.DataSync.Providers.MongoDb.Extensions;
 using Simego.DataSync.Providers.MongoDb.TypeConverters;
@@ -13,8 +14,8 @@ using System.Windows.Forms;
 
 namespace Simego.DataSync.Providers.MongoDb
 {
-    [ProviderInfo(Name = "MongoDb", Description = "Read and Write data stored in a MongoDb Database", Group = "MongoDb")]
-    public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup, IDataSourceRegistry
+    [ProviderInfo(Name = "MongoDb", Group = "MongoDb", Description = "Read and Write data stored in a MongoDb Database")]
+    public class MongoDbDatasourceReader : DataReaderProviderBase, IDataSourceSetup, IDataSourceRegistry, IDataSourceRegistryView
     {
         private ConnectionInterface _connectionIf;
 
@@ -317,20 +318,22 @@ namespace Simego.DataSync.Providers.MongoDb
         
         #region IDataSourceSetup - Render Custom Configuration UI
 
-        public void DisplayConfigurationUI(Control parent)
+        public void DisplayConfigurationUI(IntPtr parent)
         {
+            var parentControl = Control.FromHandle(parent);
+            
             if (_connectionIf == null)
             {
                 _connectionIf = new ConnectionInterface();
                 _connectionIf.PropertyGrid.SelectedObject = new ConnectionProperties(this);
             }
 
-            _connectionIf.Font = parent.Font;
-            _connectionIf.Size = new Size(parent.Width, parent.Height);
+            _connectionIf.Font = parentControl.Font;
+            _connectionIf.Size = new Size(parentControl.Width, parentControl.Height);
             _connectionIf.Location = new Point(0, 0);
-            _connectionIf.Dock = DockStyle.Fill;
+            _connectionIf.Dock = System.Windows.Forms.DockStyle.Fill;
 
-            parent.Controls.Add(_connectionIf);
+            parentControl.Controls.Add(_connectionIf);
         }
 
         public bool Validate()
@@ -363,6 +366,7 @@ namespace Simego.DataSync.Providers.MongoDb
         public MongoClient GetClient() => new MongoClient(MongoClientSettings.FromConnectionString(ConnectionString));
         public List<string> GetDatabases() => GetClient().ListDatabaseNames().ToList();
         public List<string> GetCollections() => GetClient().GetDatabase(Database).ListCollectionNames().ToList();
+        public List<string> GetCollections(string database) => GetClient().GetDatabase(database).ListCollectionNames().ToList();
 
         [Category("Connection.Library")]
         [Description("Key Name of the Item in the Connection Library")]
@@ -405,6 +409,67 @@ namespace Simego.DataSync.Providers.MongoDb
         }
 
         public virtual object GetRegistryInterface() => new MongoDbDatasourceReaderWithRegistry(this);
+
+        public RegistryConnectionInfo GetRegistryConnectionInfo()
+        {
+            return new RegistryConnectionInfo { GroupName = "MongoDb Connnections", ConnectionGroupImage = RegistryImageEnum.Databases, ConnectionImage = RegistryImageEnum.Databases };
+        }
+
+        public RegistryViewContainer GetRegistryViewContainer(string parent, string id, object state)
+        {
+            if (parent == null)
+            {
+                var rootFolder = new RegistryFolderType
+                {
+                    Image = RegistryImageEnum.Database,
+                    Preview = false,
+                };
+
+                var databases = new RegistryFolder
+                {
+                    FolderName = "Databases",
+                    Image = RegistryImageEnum.Folder,
+                    Completed = false,
+                    FolderObjectType = new RegistryFolderType { Preview = false, ParameterName = nameof(Database), Image = RegistryImageEnum.Database }
+                };
+
+                foreach (var database in GetDatabases().OrderBy(k => k))
+                {
+                    databases.AddFolderItem(database, database);
+                }
+
+                return new RegistryViewContainer(rootFolder, new[] { databases });
+            }
+
+            if (parent == "Databases")
+            {
+                var collections = new RegistryFolder
+                {
+                    FolderName = "Collections",
+                    Image = RegistryImageEnum.Folder,
+                    Completed = true,
+                    FolderObjectType = new RegistryFolderType { Preview = true, DataType = InstanceHelper.GetTypeNameString(typeof(MongoDbDatasourceReader)), ParameterName = nameof(Collection), Image = RegistryImageEnum.Table }
+                };
+
+                collections.FolderObjectType.AddConnectionParameter(nameof(Database), id);
+
+
+                foreach (var collection in GetCollections(id))
+                {
+                    collections.AddFolderItem(collection, collection);
+                }
+
+
+                return new RegistryViewContainer(null, new[] { collections });
+            }
+
+            return null;
+        }
+
+        public object GetRegistryViewConfigurationInterface()
+        {
+            return null;
+        }
     }
 
     public class MongoDbDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbDatasourceReader>

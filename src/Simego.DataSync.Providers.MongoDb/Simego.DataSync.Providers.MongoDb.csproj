@@ -1,35 +1,36 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
-    <AssemblyTitle>MongoDb</AssemblyTitle>
-    <Product>MongoDb</Product>
-    <Copyright>Copyright ©  2021</Copyright>
-    <OutputPath>bin\$(Configuration)\</OutputPath>
-    <UseWindowsForms>true</UseWindowsForms>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="MongoDB.Driver" Version="2.17.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="Simego.DataSync">
-      <HintPath>..\..\3rdParty\Simego.DataSync.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="System.Windows.Forms" />
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="ConnectionInterface.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
-    <Compile Update="ConnectionInterface.Designer.cs">
-      <DependentUpon>ConnectionInterface.cs</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Update="ConnectionInterface.resx">
-      <DependentUpon>ConnectionInterface.cs</DependentUpon>
-    </EmbeddedResource>
-  </ItemGroup>
+	<PropertyGroup>
+		<TargetFramework>net48</TargetFramework>
+		<OutputType>Library</OutputType>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<UseWindowsForms>true</UseWindowsForms>
+		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+		<AssemblyTitle>MongoDb</AssemblyTitle>
+		<Product>MongoDb</Product>
+		<Copyright>Copyright ©  2021</Copyright>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="MongoDB.Driver" Version="2.17.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+	</ItemGroup>
+	<ItemGroup>
+		<Reference Include="Microsoft.CSharp" />
+		<Reference Include="Simego.DataSync.Core">
+		  <HintPath>..\..\3rdParty\Simego.DataSync.Core.dll</HintPath>
+		</Reference>
+		<Reference Include="System.Windows.Forms" />
+	</ItemGroup>
+	<ItemGroup>
+		<Compile Update="ConnectionInterface.cs">
+			<SubType>UserControl</SubType>
+		</Compile>
+		<Compile Update="ConnectionInterface.Designer.cs">
+			<DependentUpon>ConnectionInterface.cs</DependentUpon>
+		</Compile>
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Update="ConnectionInterface.resx">
+			<DependentUpon>ConnectionInterface.cs</DependentUpon>
+		</EmbeddedResource>
+	</ItemGroup>
 </Project>

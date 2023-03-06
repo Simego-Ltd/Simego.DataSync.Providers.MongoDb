@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Linq;
 using MongoDB.Bson;
 using Newtonsoft.Json.Linq;
+using Simego.DataSync.Core;
 using Simego.DataSync.Interfaces;
 using Simego.DataSync.Providers.MongoDb.Extensions;
 using Simego.DataSync.Providers.MongoDb.TypeConverters;
@@ -11,7 +13,7 @@ using Simego.DataSync.Providers.MongoDb.TypeConverters;
 namespace Simego.DataSync.Providers.MongoDb
 {
     [ProviderInfo(Name = "MongoDb - Podio Data", Description = "Reads Podio App Items data stored in MongoDb", Group = "MongoDb")]
-    public class MongoDbPodioDatasourceReader : MongoDbDatasourceReader, IDataSourceRegistry
+    public class MongoDbPodioDatasourceReader : MongoDbDatasourceReader, IDataSourceRegistry, IDataSourceRegistryView
     {
         [Category("Settings.Podio")]
         [Description("Json Element containing Podio Json Data")]
@@ -378,6 +380,67 @@ namespace Simego.DataSync.Providers.MongoDb
         }
 
         public override object GetRegistryInterface() => new MongoDbPodioDatasourceReaderWithRegistry(this);
+
+        public RegistryConnectionInfo GetRegistryConnectionInfo()
+        {
+            return new RegistryConnectionInfo { GroupName = "MongoDb Podio Schema Connnections", ConnectionGroupImage = RegistryImageEnum.Podio, ConnectionImage = RegistryImageEnum.Podio };
+        }
+
+        public RegistryViewContainer GetRegistryViewContainer(string parent, string id, object state)
+        {
+            if (parent == null)
+            {
+                var rootFolder = new RegistryFolderType
+                {
+                    Image = RegistryImageEnum.Database,
+                    Preview = false,
+                };
+
+                var databases = new RegistryFolder
+                {
+                    FolderName = "Databases",
+                    Image = RegistryImageEnum.Folder,
+                    Completed = false,
+                    FolderObjectType = new RegistryFolderType { Preview = false, ParameterName = nameof(Database), Image = RegistryImageEnum.Database }
+                };
+
+                foreach (var database in GetDatabases().OrderBy(k => k))
+                {
+                    databases.AddFolderItem(database, database);
+                }
+
+                return new RegistryViewContainer(rootFolder, new[] { databases });
+            }
+
+            if (parent == "Databases")
+            {
+                var collections = new RegistryFolder
+                {
+                    FolderName = "Collections",
+                    Image = RegistryImageEnum.Folder,
+                    Completed = true,
+                    FolderObjectType = new RegistryFolderType { Preview = true, DataType = InstanceHelper.GetTypeNameString(typeof(MongoDbDatasourceReader)), ParameterName = nameof(Collection), Image = RegistryImageEnum.Table }
+                };
+
+                collections.FolderObjectType.AddConnectionParameter(nameof(Database), id);
+
+
+                foreach (var collection in GetCollections(id))
+                {
+                    collections.AddFolderItem(collection, collection);
+                }
+
+
+                return new RegistryViewContainer(null, new[] { collections });
+            }
+
+            return null;
+        }
+
+        public object GetRegistryViewConfigurationInterface()
+        {
+            return null;
+        }
     }
 
     public class MongoDbPodioDatasourceReaderWithRegistry : DataReaderRegistryView<MongoDbPodioDatasourceReader>
