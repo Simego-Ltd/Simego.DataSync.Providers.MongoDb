@@ -4,6 +4,7 @@ rmdir ..\dist\ /S /Q
 mkdir ..\dist\files\%p%
 xcopy ..\src\%p%\bin\Release\net48\*.* ..\dist\files\%p%\*.* /y
 cd ..\dist\files\
+del .\%p%\Newtonsoft.Json.dll
 del .\%p%\Simego.DataSync.dll
 del .\%p%\Simego.DataSync.Core.dll
 tar.exe -acf ..\%p%.zip *.*

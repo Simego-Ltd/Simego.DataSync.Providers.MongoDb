@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<TargetFramework>net48</TargetFramework>
-		<OutputType>Library</OutputType>
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<UseWindowsForms>true</UseWindowsForms>
-		<ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
 		<AssemblyTitle>MongoDb</AssemblyTitle>
 		<Product>MongoDb</Product>
-		<Copyright>Copyright ©  2021</Copyright>
+		<Company>Simego Ltd</Company>
+		<Product>Simego.DataSync.Providers.MongoDb</Product>
+		<Copyright>Copyright © 2008-2022</Copyright>
+		<AssemblyVersion>6.0.3160</AssemblyVersion>
+		<FileVersion>6.0.3160</FileVersion>
+		<OutputPath>bin\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="MongoDB.Driver" Version="2.17.0" />
@@ -17,6 +18,7 @@
 		<Reference Include="Microsoft.CSharp" />
 		<Reference Include="Simego.DataSync.Core">
 		  <HintPath>..\..\3rdParty\Simego.DataSync.Core.dll</HintPath>
+		  <Private>False</Private>
 		</Reference>
 		<Reference Include="System.Windows.Forms" />
 	</ItemGroup>
